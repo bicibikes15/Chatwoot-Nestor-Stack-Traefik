@@ -1,0 +1,73 @@
+# ##################################################
+# #                                                #
+# #       STACK DE CHATWOOT_NESTOR PARA TRAEFIK    #
+# #         https://digitallfran.co                #
+# #                                                #
+# ##################################################
+
+services:
+  # --- Servicio principal de la aplicación (Rails) ---
+  rails:
+    ## -----------------https://digitallfran.co--------------------- ##
+    image: sendingtk/chatwoot-arm:latest
+    container_name: chatwoot_nestor_rails
+    restart: unless-stopped
+    command: sh -c "bundle exec rails db:chatwoot_prepare && bundle exec rails s -p 3000 -b 0.0.0.0"
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DATABASE: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@${REDIS_HOST}:6379/0"
+      FRONTEND_URL: ${FRONTEND_URL}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+      RAILS_ENV: production
+      NODE_ENV: production
+      INSTALLATION_ENV: docker
+      RAILS_LOG_TO_STDOUT: "true"
+      MAILER_SENDER_EMAIL: ${MAILER_SENDER_EMAIL}
+      SMTP_ADDRESS: ${SMTP_ADDRESS}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_DOMAIN: ${SMTP_DOMAIN}
+      SMTP_ENABLE_STARTTLS_AUTO: ${SMTP_ENABLE_STARTTLS_AUTO}
+    volumes:
+      - chatwoot_nestor_storage:/app/storage
+    networks:
+      - digitallfran_net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=digitallfran_net"
+      - "traefik.http.routers.chatwoot-nestor.rule=Host(`${CHATWOOT_DOMAIN}`)"
+      - "traefik.http.routers.chatwoot-nestor.entrypoints=websecure"
+      - "traefik.http.routers.chatwoot-nestor.tls.certresolver=myresolver"
+      - "traefik.http.services.chatwoot-nestor.loadbalancer.server.port=3000"
+
+  # --- Servicio de trabajos en segundo plano (Sidekiq) ---
+  sidekiq:
+    ## -----------------https://digitallfran.co--------------------- ##
+    image: sendingtk/chatwoot-arm:latest
+    container_name: chatwoot_nestor_sidekiq
+    restart: unless-stopped
+    command: bundle exec sidekiq -C config/sidekiq.yml
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_DATABASE: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_URL: "redis://:${REDIS_PASSWORD}@${REDIS_HOST}:6379/0"
+      RAILS_ENV: production
+      NODE_ENV: production
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
+    volumes:
+      - chatwoot_nestor_storage:/app/storage
+    networks:
+      - digitallfran_net
+
+volumes:
+  chatwoot_nestor_storage:
+
+networks:
+  digitallfran_net:
+    external: true

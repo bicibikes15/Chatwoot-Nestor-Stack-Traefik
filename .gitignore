@@ -1,0 +1,5 @@
+# Ignorar el archivo de entorno con los secretos reales.
+.env
+
+# Ignorar el directorio de datos si se usara un bind mount.
+/storage/
